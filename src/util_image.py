@@ -5,9 +5,10 @@ from typing import Optional
 import matplotlib.pyplot as plt
 
 
-def show_grayscale(
+def plot_grayscale(
     array, title: Optional[str] = None, filename: Optional[str] = None
 ) -> None:
+    """Plots the image as a grayscale image."""
     plt.figure(figsize=(6, 6))
     plt.imshow(array, cmap="gray", interpolation="nearest")
     plt.axis("off")

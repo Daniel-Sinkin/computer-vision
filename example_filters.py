@@ -3,7 +3,7 @@
 import numpy as np
 
 from src.filter import FilterType, apply_filter, get_filter
-from src.util_image import show_grayscale
+from src.util_image import plot_grayscale
 from util.image_to_np import load_image_as_array
 from util.rbg_to_grayscale import rgb_to_grayscale
 
@@ -35,7 +35,7 @@ def get_my_filter() -> np.ndarray:
 
 
 def filter_and_plot(filter_name):
-    show_grayscale(
+    plot_grayscale(
         apply_filter(image_loaded, get_filter(filter_name)),
         title=filter_name,
         filename=filter_name,
@@ -45,25 +45,25 @@ def filter_and_plot(filter_name):
 def main() -> None:
     image_conv = apply_filter(image=get_my_image(), filter_=get_my_filter())
 
-    show_grayscale(get_my_image())
-    show_grayscale(image_conv)
+    plot_grayscale(get_my_image())
+    plot_grayscale(image_conv)
 
-    show_grayscale(image_loaded, title="original")
+    plot_grayscale(image_loaded, title="original")
     filter_and_plot(filter_name=FilterType.SOBEL_X)
     filter_and_plot(filter_name=FilterType.SOBEL_Y)
 
     filter_and_plot(filter_name=FilterType.LAPLACIAN)
 
     smoothed_image = apply_filter(image_loaded, get_filter(FilterType.GAUSS_5X5))
-    show_grayscale(
+    plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.LAPLACIAN)),
         title="Smoothed (5x5) then Laplace",
     )
-    show_grayscale(
+    plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_X)),
         title="Smoothed (5x5) then Sobel_x",
     )
-    show_grayscale(
+    plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_Y)),
         title="Smoothed (5x5) then Sobel_y",
     )
