@@ -1,9 +1,12 @@
 """danielsinkin97@gmail.com"""
 
+from typing import Optional
+
 import matplotlib.patches as patches
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.constants import FolderPath
 from src.filter import FilterType, apply_filter, get_filter
 from src.util_image import plot_grayscale
 from util.image_to_np import load_image_as_array
@@ -76,7 +79,7 @@ def example_autocorrelation() -> None:
     plot_delta_boxes(x, y, dx, dy)
     plot_delta_boxes(x2, y2, dx2, dy2)
 
-    plt.savefig("images/autocorrelation_lion.png", dpi=300)
+    plt.savefig(FolderPath.Images.joinpath("autocorrelation_lion.png"), dpi=300)
     plt.show()
 
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
@@ -102,10 +105,12 @@ def example_autocorrelation() -> None:
     axes[1, 1].set_title(f"box2_offset: (y={y2p}, x={x2p})")
     axes[1, 1].axis("off")
 
-    plt.savefig("images/autocorrelation_lion_boxes.png", dpi=300)
+    plt.savefig(FolderPath.Images.joinpath("autocorrelation_lion_boxes.png"), dpi=300)
     plt.show()
 
-    def plot_ac_error_surface(y_orig, x_orig, max_offset_y=5, max_offset_x=5) -> None:
+    def plot_ac_error_surface(
+        y_orig, x_orig, max_offset_y=5, max_offset_x=5, filename: Optional[str] = None
+    ) -> None:
         dy_range = range(-max_offset_y, max_offset_y + 1)
         dx_range = range(-max_offset_x, max_offset_x + 1)
 
@@ -132,11 +137,14 @@ def example_autocorrelation() -> None:
         ax.set_title(
             f"AC Error Surface\n(y={y_orig}, x={x_orig}, max_offset_y={max_offset_y}, max_offset_x={max_offset_x})"
         )
-
+        if filename is not None:
+            if "." not in filename:
+                filename += ".png"
+            plt.savefig(FolderPath.Images.joinpath(filename), dpi=300)
         plt.show()
 
-    plot_ac_error_surface(y, x, 10, 10)
-    plot_ac_error_surface(y2, x2, 10, 10)
+    plot_ac_error_surface(y, x, 10, 10, "autocorrelation_error_surface1")
+    plot_ac_error_surface(y2, x2, 10, 10, "autocorrelation_error_surface2")
 
 
 if __name__ == "__main__":
