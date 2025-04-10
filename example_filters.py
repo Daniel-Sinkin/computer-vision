@@ -1,5 +1,6 @@
 """danielsinkin97@gmail.com"""
 
+import matplotlib.pyplot as plt
 import numpy as np
 
 from src.filter import FilterType, apply_filter, get_filter
@@ -7,7 +8,7 @@ from src.util_image import plot_grayscale
 from util.image_to_np import load_image_as_array
 from util.rbg_to_grayscale import rgb_to_grayscale
 
-image_loaded = rgb_to_grayscale(
+image = rgb_to_grayscale(
     load_image_as_array(
         "/Users/danielsinkin/GitHub_private/computer-vision/data/lion_downscaled.jpg"
     )
@@ -36,19 +37,23 @@ def get_my_filter() -> np.ndarray:
 
 def filter_and_plot(filter_name):
     plot_grayscale(
-        apply_filter(image_loaded, get_filter(filter_name)),
+        apply_filter(image, get_filter(filter_name)),
         title=filter_name,
         filename=filter_name,
     )
+    plt.show()
 
 
 def main() -> None:
     image_conv = apply_filter(image=get_my_image(), filter_=get_my_filter())
 
     plot_grayscale(get_my_image())
+    plt.show()
     plot_grayscale(image_conv)
+    plt.show()
 
-    plot_grayscale(image_loaded, title="original")
+    plot_grayscale(image, title="original")
+    plt.show()
     filter_and_plot(filter_name=FilterType.SOBEL_X)
     filter_and_plot(filter_name=FilterType.SOBEL_Y)
 
@@ -58,23 +63,27 @@ def main() -> None:
 
     filter_and_plot(filter_name=FilterType.BILINEAR)
 
-    smoothed_image = apply_filter(image_loaded, get_filter(FilterType.GAUSS_5X5))
+    smoothed_image = apply_filter(image, get_filter(FilterType.GAUSS_5X5))
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.LAPLACIAN)),
         title="Smoothed (5x5) then Laplace",
     )
+    plt.show()
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_X)),
         title="Smoothed (5x5) then Sobel_x",
     )
+    plt.show()
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_Y)),
         title="Smoothed (5x5) then Sobel_y",
     )
+    plt.show()
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.CORNER)),
         title="Smoothed (5x5) then Corner",
     )
+    plt.show()
 
     for gaussian in [
         FilterType.GAUSS_3X3,

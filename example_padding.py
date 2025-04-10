@@ -1,5 +1,7 @@
 """danielsinkin97@gmail.com"""
 
+import matplotlib.pyplot as plt
+
 from src.padding import PaddingType, apply_padding
 from src.util_image import plot_grayscale
 from util.image_to_np import load_image_as_array
@@ -20,6 +22,7 @@ def apply_padding_and_plot(padding_size: int, padding_type: PaddingType):
         title=filename,
         filename=filename,
     )
+    plt.show()
 
 
 def main() -> None:
