@@ -20,4 +20,4 @@ def plot_grayscale(
     if filename is not None:
         if "." not in filename:
             filename = filename + ".png"
-        plt.savefig(f"images/{filename}")
+        plt.savefig(f"images/{filename}", dpi=300)
