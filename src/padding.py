@@ -1,15 +1,15 @@
+"""danielsinkin97@gmail.com"""
+
 from enum import StrEnum
 
 import numpy as np
 
 from src.constants import RBG_MAX
-from src.filter import FilterName, apply_filter, get_filter
-from src.util_image import show_grayscale
-from util.image_to_np import load_image_as_array
-from util.rbg_to_grayscale import rgb_to_grayscale
 
 
 class PaddingType(StrEnum):
+    """Contains the types of padding that have been implemented so far."""
+
     ZERO = "zero"
     ONE = "one"
     WRAP = "wrap"
@@ -19,6 +19,7 @@ class PaddingType(StrEnum):
 def apply_padding(
     image: np.ndarray, pad: int, padding_type: PaddingType = PaddingType.ZERO
 ) -> np.ndarray:
+    """Apply the selected type of padding to the image and return this padded version."""
     i_h, i_w = image.shape
     p_h, p_w = i_h + 2 * pad, i_w + 2 * pad
 

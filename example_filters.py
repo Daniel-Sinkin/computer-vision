@@ -2,7 +2,7 @@
 
 import numpy as np
 
-from src.filter import FilterName, apply_filter, get_filter
+from src.filter import FilterType, apply_filter, get_filter
 from src.util_image import show_grayscale
 from util.image_to_np import load_image_as_array
 from util.rbg_to_grayscale import rgb_to_grayscale
@@ -43,36 +43,36 @@ def filter_and_plot(filter_name):
 
 
 def main() -> None:
-    image_conv = apply_filter(image=get_my_image(), filter=get_my_filter())
+    image_conv = apply_filter(image=get_my_image(), filter_=get_my_filter())
 
     show_grayscale(get_my_image())
     show_grayscale(image_conv)
 
     show_grayscale(image_loaded, title="original")
-    filter_and_plot(filter_name=FilterName.SOBEL_X)
-    filter_and_plot(filter_name=FilterName.SOBEL_Y)
+    filter_and_plot(filter_name=FilterType.SOBEL_X)
+    filter_and_plot(filter_name=FilterType.SOBEL_Y)
 
-    filter_and_plot(filter_name=FilterName.LAPLACIAN)
+    filter_and_plot(filter_name=FilterType.LAPLACIAN)
 
-    smoothed_image = apply_filter(image_loaded, get_filter(FilterName.GAUSS_5x5))
+    smoothed_image = apply_filter(image_loaded, get_filter(FilterType.GAUSS_5X5))
     show_grayscale(
-        apply_filter(smoothed_image, get_filter(FilterName.LAPLACIAN)),
+        apply_filter(smoothed_image, get_filter(FilterType.LAPLACIAN)),
         title="Smoothed (5x5) then Laplace",
     )
     show_grayscale(
-        apply_filter(smoothed_image, get_filter(FilterName.SOBEL_X)),
+        apply_filter(smoothed_image, get_filter(FilterType.SOBEL_X)),
         title="Smoothed (5x5) then Sobel_x",
     )
     show_grayscale(
-        apply_filter(smoothed_image, get_filter(FilterName.SOBEL_Y)),
+        apply_filter(smoothed_image, get_filter(FilterType.SOBEL_Y)),
         title="Smoothed (5x5) then Sobel_y",
     )
 
     for gaussian in [
-        FilterName.GAUSS_3x3,
-        FilterName.GAUSS_5x5,
-        FilterName.GAUSS_7x7,
-        FilterName.GAUSS_15x15,
+        FilterType.GAUSS_3X3,
+        FilterType.GAUSS_5X5,
+        FilterType.GAUSS_7X7,
+        FilterType.GAUSS_15X15,
     ]:
         filter_and_plot(filter_name=gaussian)
 

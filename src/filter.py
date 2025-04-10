@@ -1,36 +1,37 @@
 """danielsinkin97@gmail.com"""
 
 from enum import StrEnum
-from typing import Optional
 
-import matplotlib.pyplot as plt
 import numpy as np
 from numpy._typing import DTypeLike
 
 
-class FilterName(StrEnum):
+class FilterType(StrEnum):
+    """Contains all implemented linear filters."""
+
     SOBEL_X = "sobel_x"
     SOBEL_Y = "sobel_y"
     LAPLACIAN = "laplacian"
-    GAUSS_3x3 = "gaussian_3x3"
-    GAUSS_5x5 = "gaussian_5x5"
-    GAUSS_7x7 = "gaussian_7x7"
-    GAUSS_15x15 = "gaussian_15x15"
+    GAUSS_3X3 = "gaussian_3x3"
+    GAUSS_5X5 = "gaussian_5x5"
+    GAUSS_7X7 = "gaussian_7x7"
+    GAUSS_15X15 = "gaussian_15x15"
 
 
 def get_filter(
-    filter_name: FilterName = FilterName.GAUSS_5x5, dtype: DTypeLike = np.float32
+    filter_name: FilterType = FilterType.GAUSS_5X5, dtype: DTypeLike = np.float32
 ) -> np.ndarray:
+    """Allows selecting filters via their name."""
     match filter_name:
-        case FilterName.SOBEL_X:
+        case FilterType.SOBEL_X:
             return np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=dtype)
-        case FilterName.SOBEL_Y:
+        case FilterType.SOBEL_Y:
             return np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=dtype)
-        case FilterName.LAPLACIAN:
+        case FilterType.LAPLACIAN:
             return np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=dtype)
-        case FilterName.GAUSS_3x3:
+        case FilterType.GAUSS_3X3:
             return (1 / 16.0) * np.array([[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype)
-        case FilterName.GAUSS_5x5:
+        case FilterType.GAUSS_5X5:
             return (1 / 273.0) * np.array(
                 [
                     [1, 4, 7, 4, 1],
@@ -41,7 +42,7 @@ def get_filter(
                 ],
                 dtype=dtype,
             )
-        case FilterName.GAUSS_7x7:
+        case FilterType.GAUSS_7X7:
             return (1 / 1003.0) * np.array(
                 [
                     [0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0],
@@ -54,7 +55,7 @@ def get_filter(
                 ],
                 dtype=dtype,
             )
-        case FilterName.GAUSS_15x15:
+        case FilterType.GAUSS_15X15:
 
             def gaussian_kernel(size: int, sigma: float) -> np.ndarray:
                 ax = np.linspace(-(size // 2), size // 2, size)
@@ -68,15 +69,16 @@ def get_filter(
 
 
 def apply_filter(
-    image: np.ndarray, filter: np.ndarray, flip_filter: bool = True
+    image: np.ndarray, filter_: np.ndarray, flip_filter: bool = True
 ) -> np.ndarray:
+    """Applies a linear filter to the given image, either normally or flipped."""
     if flip_filter:
-        _filter = np.flipud(np.fliplr(filter))
+        _filter = np.flipud(np.fliplr(filter_))
     else:
-        _filter = filter
+        _filter = filter_
 
     i_h, i_w = image.shape
-    f_h, f_w = filter.shape
+    f_h, f_w = filter_.shape
 
     r_h, r_w = i_h - f_h + 1, i_w - f_w + 1
 
