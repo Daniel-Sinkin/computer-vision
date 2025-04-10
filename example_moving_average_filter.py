@@ -5,7 +5,7 @@ from typing import cast
 import matplotlib.pyplot as plt
 import numpy as np
 
-from .constants import FolderPath
+from src.constants import FolderPath
 
 FILTER = 1  # How far in each direction our filter goes, filter size is 2 * FILTER + 1
 

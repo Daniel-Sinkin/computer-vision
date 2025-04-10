@@ -30,6 +30,7 @@ def main() -> None:
     apply_padding_and_plot(5, "zero")
     apply_padding_and_plot(10, "wrap")
     apply_padding_and_plot(10, "clamp")
+    apply_padding_and_plot(10, "mirror")
 
 
 if __name__ == "__main__":
