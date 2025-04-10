@@ -3,6 +3,8 @@
 from dataclasses import dataclass
 from pathlib import Path
 
+RBG_MAX = 255
+
 
 @dataclass(frozen=True)
 class FolderPath:
