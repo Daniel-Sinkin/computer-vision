@@ -16,7 +16,7 @@ image = rgb_to_grayscale(
 
 def apply_padding_and_plot(padding_size: int, padding_type: PaddingType):
     """Helper function that pads and plots in one go."""
-    filename = f"{padding_type}_padding"
+    filename = f"padding_{padding_type}"
     plot_grayscale(
         apply_padding(image=image, pad=padding_size, padding_type=padding_type),
         title=filename,
