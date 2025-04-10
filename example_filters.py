@@ -54,6 +54,10 @@ def main() -> None:
 
     filter_and_plot(filter_name=FilterType.LAPLACIAN)
 
+    filter_and_plot(filter_name=FilterType.CORNER)
+
+    filter_and_plot(filter_name=FilterType.BILINEAR)
+
     smoothed_image = apply_filter(image_loaded, get_filter(FilterType.GAUSS_5X5))
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.LAPLACIAN)),
@@ -66,6 +70,10 @@ def main() -> None:
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_Y)),
         title="Smoothed (5x5) then Sobel_y",
+    )
+    plot_grayscale(
+        apply_filter(smoothed_image, get_filter(FilterType.CORNER)),
+        title="Smoothed (5x5) then Corner",
     )
 
     for gaussian in [

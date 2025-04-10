@@ -9,8 +9,12 @@ from numpy._typing import DTypeLike
 class FilterType(StrEnum):
     """Contains all implemented linear filters."""
 
+    BOX_5 = "box_5"
+    BOX_10 = "box_10"
+    BILINEAR = "bilinear"
     SOBEL_X = "sobel_x"
     SOBEL_Y = "sobel_y"
+    CORNER = "corner"
     LAPLACIAN = "laplacian"
     GAUSS_3X3 = "gaussian_3x3"
     GAUSS_5X5 = "gaussian_5x5"
@@ -23,27 +27,41 @@ def get_filter(
 ) -> np.ndarray:
     """Allows selecting filters via their name."""
     match filter_name:
+        case FilterType.BOX_5:
+            return (1.0 / 25.0) * np.ones((5, 5))
+        case FilterType.BOX_10:
+            return (1.0 / 100.0) * np.ones((10, 10))
+        case FilterType.BILINEAR:
+            return (1.0 / 16.0) * np.array(
+                [[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype
+            )
+        case FilterType.CORNER:
+            return (1.0 / 4.0) * np.array([[1, -2, 1], [-2, 4, -2], [1, -2, 1]])
         case FilterType.SOBEL_X:
-            return np.array([[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=dtype)
+            return (1.0 / 8.0) * np.array(
+                [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=dtype
+            )
         case FilterType.SOBEL_Y:
             return np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=dtype)
         case FilterType.LAPLACIAN:
             return np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=dtype)
         case FilterType.GAUSS_3X3:
-            return (1 / 16.0) * np.array([[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype)
+            return (1.0 / 16.0) * np.array(
+                [[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype
+            )
         case FilterType.GAUSS_5X5:
-            return (1 / 273.0) * np.array(
+            return (1.0 / 256.0) * np.array(
                 [
-                    [1, 4, 7, 4, 1],
-                    [4, 16, 26, 16, 4],
-                    [7, 26, 41, 26, 7],
-                    [4, 16, 26, 16, 4],
-                    [1, 4, 7, 4, 1],
+                    [1, 4, 6, 4, 1],
+                    [4, 16, 24, 16, 4],
+                    [6, 24, 36, 24, 6],
+                    [4, 16, 24, 16, 4],
+                    [1, 4, 6, 4, 1],
                 ],
                 dtype=dtype,
             )
         case FilterType.GAUSS_7X7:
-            return (1 / 1003.0) * np.array(
+            return (1.0 / 1003.0) * np.array(
                 [
                     [0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0],
                     [0.0, 3.0, 13.0, 22.0, 13.0, 3.0, 0.0],
