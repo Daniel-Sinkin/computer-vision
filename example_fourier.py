@@ -6,20 +6,20 @@ import numpy as np
 from src.constants import FolderPath
 
 
-def main() -> None:
-    N = 512
-    x = np.linspace(0, 2 * np.pi, N, endpoint=False)
+def example_fourier() -> None:
+    """Plots a function and its corresponding fourier transform"""
+    n = 512
+    x = np.linspace(0, 2 * np.pi, n, endpoint=False)
 
     f = 3 * np.exp(1j * x) + np.exp(3j * x) + 0.5 * np.exp(5j * x) + 2
 
-    F = np.fft.fft(f)
-    F_normalized = F / N
+    f_fourier = np.fft.fft(f)
+    f_fourier_normalised = f_fourier / n
 
-    F_shifted = np.fft.fftshift(F_normalized)
+    f_fourier_shifted = np.fft.fftshift(f_fourier_normalised)
 
     dx = x[1] - x[0]
-    freq = np.fft.fftfreq(N, d=dx)
-    # Convert frequency to angular frequency omega = 2pi * f
+    freq = np.fft.fftfreq(n, d=dx)
     omega = freq * 2 * np.pi
     omega = np.fft.fftshift(omega)
 
@@ -33,6 +33,7 @@ def main() -> None:
     axs[0].legend()
     axs[0].grid(True)
 
+    axs[1].stem(omega, np.abs(f_fourier_shifted), basefmt=" ")
     axs[1].set_title("Fourier Transform |F(ω)|")
     axs[1].set_xlabel("Angular frequency ω")
     axs[1].set_ylabel("Magnitude")
@@ -45,4 +46,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    example_fourier()
