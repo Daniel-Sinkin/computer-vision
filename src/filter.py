@@ -89,21 +89,27 @@ def get_filter(
 def apply_filter(
     image: np.ndarray, filter_: np.ndarray, flip_filter: bool = True
 ) -> np.ndarray:
-    """Applies a linear filter to the given image, either normally or flipped."""
+    """
+    Applies a linear filter (1D or 2D) to the given image, either normally or flipped.
+    """
+    if filter_.ndim == 1:
+        # Assume 1D filters are horizontal by default
+        filter_ = filter_.reshape(1, -1)
+
     if flip_filter:
         _filter = np.flipud(np.fliplr(filter_))
     else:
         _filter = filter_
 
     i_h, i_w = image.shape
-    f_h, f_w = filter_.shape
+    f_h, f_w = _filter.shape
 
     r_h, r_w = i_h - f_h + 1, i_w - f_w + 1
-
     result = np.zeros((r_h, r_w), dtype=np.float32)
 
     for y in range(r_h):
         for x in range(r_w):
             region = image[y : y + f_h, x : x + f_w]
             result[y, x] = np.sum(region * _filter)
+
     return result
