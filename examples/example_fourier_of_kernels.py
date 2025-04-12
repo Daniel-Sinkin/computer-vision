@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """danielsinkin97@gmail.com"""
 
 import matplotlib.pyplot as plt
