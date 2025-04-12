@@ -1,0 +1,9 @@
+[MASTER]
+ignore=venv,.venv,__pycache__
+extension-pkg-allow-list=numpy
+jobs=1
+
+[MESSAGES CONTROL]
+disable=
+    I1101,
+    E1101,
