@@ -9,7 +9,7 @@ LION_URL = "https://images.pexels.com/photos/18199766/pexels-photo-18199766/free
 destination = Path(__file__).parent.joinpath("../data/lion.jpg").resolve()
 
 
-def main() -> None:
+def download_files() -> None:
     response = requests.get(LION_URL, timeout=10.0)
     response.raise_for_status()
 
@@ -20,4 +20,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    download_files()

@@ -7,6 +7,12 @@ from computer_vision.src.constants import FolderPath
 from computer_vision.src.filter import FilterType, apply_filter, get_filter
 from computer_vision.util.images import load_image_as_array, rgb_to_grayscale
 
+loaded_image = rgb_to_grayscale(
+    load_image_as_array(
+        "/Users/danielsinkin/GitHub_private/computer-vision/data/hummingbird.png"
+    )
+)
+
 
 def example_autocorrelation_detection(image: np.ndarray) -> None:
     """Applies autocorrelation in the combined form to the entire image."""
@@ -62,9 +68,4 @@ def example_autocorrelation_detection(image: np.ndarray) -> None:
 
 
 if __name__ == "__main__":
-    loaded_image = rgb_to_grayscale(
-        load_image_as_array(
-            "/Users/danielsinkin/GitHub_private/computer-vision/data/hummingbird.png"
-        )
-    )
     example_autocorrelation_detection(image=loaded_image)

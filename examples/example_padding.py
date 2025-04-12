@@ -24,7 +24,7 @@ def apply_padding_and_plot(padding_size: int, padding_type: PaddingType):
     plt.show()
 
 
-def main() -> None:
+def example_padding() -> None:
     """Displays and saves the different types of padding."""
     apply_padding_and_plot(5, "zero")
     apply_padding_and_plot(10, "wrap")
@@ -33,4 +33,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    example_padding()

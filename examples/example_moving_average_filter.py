@@ -57,7 +57,7 @@ def plot(ax: np.ndarray, image: np.ndarray, title: str, annotate: bool = False) 
             )
 
 
-def main() -> None:
+def example_moving_average_filter() -> None:
     image = generate_image()
     filtered_image = moving_average_filter(image=image, filter_size=FILTER)
 
@@ -82,4 +82,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main()
+    example_moving_average_filter()
