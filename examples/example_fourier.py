@@ -7,7 +7,7 @@ import numpy as np
 from computer_vision.src.constants import FolderPath
 
 
-def example_fourier() -> None:
+def example_fourier(show: bool = True) -> None:
     """Plots a function and its corresponding fourier transform"""
     n = 512
     x = np.linspace(0, 2 * np.pi, n, endpoint=False)
@@ -43,8 +43,11 @@ def example_fourier() -> None:
 
     plt.tight_layout()
     plt.savefig(FolderPath.Images.joinpath("example_fourier_basic.png"), dpi=300)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
 if __name__ == "__main__":
-    example_fourier()
+    example_fourier(show=True)

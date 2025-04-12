@@ -21,7 +21,7 @@ def draw_centered_rect(x_center, y_center, width, height, **kwargs) -> None:
     plt.gca().add_patch(rect)
 
 
-def example_autocorrelation() -> None:
+def example_autocorrelation(show: bool = True) -> None:
     """
     Shows two zoomed in image sections and compute autocorrelation for close neighbors, plotting
     the error surface.
@@ -80,7 +80,10 @@ def example_autocorrelation() -> None:
     plot_delta_boxes(x2, y2, dx2, dy2)
 
     plt.savefig(FolderPath.Images.joinpath("autocorrelation_lion.png"), dpi=300)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     fig, axes = plt.subplots(2, 2, figsize=(10, 10))
     fig.suptitle("Comparison of Image Patches", fontsize=16)
@@ -106,7 +109,10 @@ def example_autocorrelation() -> None:
     axes[1, 1].axis("off")
 
     plt.savefig(FolderPath.Images.joinpath("autocorrelation_lion_boxes.png"), dpi=300)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
     def plot_ac_error_surface(
         y_orig, x_orig, max_offset_y=5, max_offset_x=5, filename: Optional[str] = None
@@ -141,11 +147,14 @@ def example_autocorrelation() -> None:
             if "." not in filename:
                 filename += ".png"
             plt.savefig(FolderPath.Images.joinpath(filename), dpi=300)
-        plt.show()
+        if show:
+            plt.show()
+        else:
+            plt.close()
 
     plot_ac_error_surface(y, x, 10, 10, "autocorrelation_error_surface1")
     plot_ac_error_surface(y2, x2, 10, 10, "autocorrelation_error_surface2")
 
 
 if __name__ == "__main__":
-    example_autocorrelation()
+    example_autocorrelation(show=True)

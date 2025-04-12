@@ -14,7 +14,9 @@ image = rgb_to_grayscale(
 )
 
 
-def apply_padding_and_plot(padding_size: int, padding_type: PaddingType):
+def apply_padding_and_plot(
+    padding_size: int, padding_type: PaddingType, show: bool = True
+) -> None:
     """Helper function that pads and plots in one go."""
     filename = f"padding_{padding_type}"
     plot_grayscale(
@@ -22,16 +24,19 @@ def apply_padding_and_plot(padding_size: int, padding_type: PaddingType):
         title=filename,
         filename=filename,
     )
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
-def example_padding() -> None:
+def example_padding(show=True) -> None:
     """Displays and saves the different types of padding."""
-    apply_padding_and_plot(5, "zero")
-    apply_padding_and_plot(10, "wrap")
-    apply_padding_and_plot(10, "clamp")
-    apply_padding_and_plot(10, "mirror")
+    apply_padding_and_plot(5, "zero", show=show)
+    apply_padding_and_plot(10, "wrap", show=show)
+    apply_padding_and_plot(10, "clamp", show=show)
+    apply_padding_and_plot(10, "mirror", show=show)
 
 
 if __name__ == "__main__":
-    example_padding()
+    example_padding(show=True)

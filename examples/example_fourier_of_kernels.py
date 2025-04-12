@@ -7,7 +7,7 @@ import numpy as np
 from computer_vision.src.constants import FolderPath
 
 
-def example_fourier_of_kernels() -> None:
+def example_fourier_of_kernels(show: bool = True) -> None:
     """Plots the fourier transform for a selection of separable kernels."""
     xs = np.linspace(0, 0.5, 100)
 
@@ -53,8 +53,11 @@ def example_fourier_of_kernels() -> None:
 
     plt.tight_layout()
     plt.savefig(FolderPath.Images.joinpath("example_fourier_of_kernels.png"), dpi=300)
-    plt.show()
+    if show:
+        plt.show()
+    else:
+        plt.close()
 
 
 if __name__ == "__main__":
-    example_fourier_of_kernels()
+    example_fourier_of_kernels(show=True)
