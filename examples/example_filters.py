@@ -14,21 +14,31 @@ image = rgb_to_grayscale(
 )
 
 
+def finish_plot(show: bool = True) -> None:
+    """Either shows the plot or just closes it, in either case the canvas is clear after this."""
+    if show:
+        plt.show()
+    else:
+        plt.close()
+
+
 def get_example_image() -> np.ndarray:
     """Loads simple example image hardcoded based on the book."""
+    # fmt: off
     return np.array(
         [
-            [45, 60, 98, 127, 132, 133, 137, 133],
-            [46, 65, 98, 123, 126, 128, 131, 133],
-            [47, 65, 96, 115, 119, 123, 135, 137],
-            [47, 63, 91, 107, 113, 122, 138, 134],
-            [50, 59, 80, 97, 110, 123, 133, 134],
-            [49, 53, 68, 83, 97, 113, 128, 133],
-            [50, 50, 58, 70, 84, 102, 116, 126],
-            [50, 50, 52, 58, 69, 86, 101, 120],
+            [  45,  60,  98, 127, 132, 133, 137, 133],
+            [  46,  65,  98, 123, 126, 128, 131, 133],
+            [  47,  65,  96, 115, 119, 123, 135, 137],
+            [  47,  63,  91, 107, 113, 122, 138, 134],
+            [  50,  59,  80,  97, 110, 123, 133, 134],
+            [  49,  53,  68,  83,  97, 113, 128, 133],
+            [  50,  50,  58,  70,  84, 102, 116, 126],
+            [  50,  50,  52,  58,  69,  86, 101, 120],
         ],
         dtype=np.float32,
     )
+    # fmt: on
 
 
 def get_my_filter() -> np.ndarray:
@@ -43,10 +53,7 @@ def filter_and_plot(filter_name: str, show=True) -> None:
         title=filter_name,
         filename=filter_name,
     )
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
 
 
 def example_filters(show: bool = True) -> None:
@@ -54,21 +61,12 @@ def example_filters(show: bool = True) -> None:
     image_conv = apply_filter(image=get_example_image(), filter_=get_my_filter())
 
     plot_grayscale(get_example_image())
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
     plot_grayscale(image_conv)
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
 
     plot_grayscale(image, title="original")
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
     filter_and_plot(filter_name=FilterType.SOBEL_X, show=show)
     filter_and_plot(filter_name=FilterType.SOBEL_Y, show=show)
     filter_and_plot(filter_name=FilterType.LAPLACIAN, show=show)
@@ -80,34 +78,22 @@ def example_filters(show: bool = True) -> None:
         apply_filter(smoothed_image, get_filter(FilterType.LAPLACIAN)),
         title="Smoothed (5x5) then Laplace",
     )
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_X)),
         title="Smoothed (5x5) then Sobel_x",
     )
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.SOBEL_Y)),
         title="Smoothed (5x5) then Sobel_y",
     )
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
     plot_grayscale(
         apply_filter(smoothed_image, get_filter(FilterType.CORNER)),
         title="Smoothed (5x5) then Corner",
     )
-    if show:
-        plt.show()
-    else:
-        plt.close()
+    finish_plot(show=show)
 
     for gaussian in [
         FilterType.GAUSS_3X3,

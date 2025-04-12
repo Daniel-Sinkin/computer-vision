@@ -12,23 +12,27 @@ FILTER = 1  # How far in each direction our filter goes, filter size is 2 * FILT
 
 
 def generate_image() -> np.ndarray:
+    """Generates the example image from the book."""
+    # fmt: off
     return np.array(
         [
-            [0.0] * 10,
-            [0.0] * 10,
-            [0.0] * 3 + [90.0] * 5 + [0.0] * 2,
-            [0.0] * 3 + [90.0] * 5 + [0.0] * 2,
-            [0.0] * 3 + [90.0] * 5 + [0.0] * 2,
-            [0.0] * 3 + [90.0] + [0.0] + [90.0] * 3 + [0.0] * 2,
-            [0.0] * 3 + [90.0] * 5 + [0.0] * 2,
-            [0.0] * 10,
-            [0.0] * 2 + [90.0] + [0.0] * 7,
-            [0.0] * 10,
+            [  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0, 90.0, 90.0, 90.0, 90.0, 90.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0, 90.0, 90.0, 90.0, 90.0, 90.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0, 90.0, 90.0, 90.0, 90.0, 90.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0, 90.0,  0.0, 90.0, 90.0, 90.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0, 90.0, 90.0, 90.0, 90.0, 90.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [  0.0,  0.0, 90.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
+            [  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
         ]
     )
+    # fmt: on
 
 
 def moving_average_filter(image: np.ndarray, filter_size: int) -> np.ndarray:
+    """Applies moving average filter directly instead of applying an actual linear filter."""
     filtered_image = np.zeros_like(image)
     image_x, image_y = image.shape
 
@@ -42,11 +46,12 @@ def moving_average_filter(image: np.ndarray, filter_size: int) -> np.ndarray:
 
 
 def map_range(value: float) -> float:
-    """[0.0, 1.0] -> [0.2, 1.0]"""
+    """Helper function computing [0.0, 1.0] -> [0.2, 1.0]"""
     return 0.3 + 0.7 * (value / 100.0)
 
 
 def plot(ax: np.ndarray, image: np.ndarray, title: str, annotate: bool = False) -> None:
+    """Plots the image with optional brightness values written into it."""
     norm_img = map_range(image)
     ax.imshow(norm_img, cmap="gray", vmin=0.2, vmax=1.0)
     ax.set_title(title)
@@ -59,6 +64,7 @@ def plot(ax: np.ndarray, image: np.ndarray, title: str, annotate: bool = False) 
 
 
 def example_moving_average_filter(show: bool = True) -> None:
+    """First example of applying a filtering operation on an image."""
     image = generate_image()
     filtered_image = moving_average_filter(image=image, filter_size=FILTER)
 

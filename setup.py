@@ -1,12 +1,17 @@
+"""danielsinkin97@gmail.com"""
+
 from setuptools import find_packages, setup
+
+with open("README.md", encoding="utf-8") as f:
+    long_description = f.read()
 
 setup(
     name="computer_vision",
     version="0.1.0",
-    author="Your Name",
-    author_email="your.email@example.com",
+    author="Daniel Sinkin",
+    author_email="danielsinkin97@gmail.com",
     description="A computer vision toolkit.",
-    long_description=open("README.md", encoding="utf-8").read(),
+    long_description=long_description,
     long_description_content_type="text/markdown",
     license="MIT",
     packages=find_packages(

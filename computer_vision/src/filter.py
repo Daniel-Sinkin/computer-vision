@@ -28,29 +28,29 @@ def get_filter(
     """Allows selecting filters via their name."""
     match filter_name:
         case FilterType.BOX_5:
-            return (1.0 / 25.0) * np.ones((5, 5))
+            filter_ = (1.0 / 25.0) * np.ones((5, 5))
         case FilterType.BOX_10:
-            return (1.0 / 100.0) * np.ones((10, 10))
+            filter_ = (1.0 / 100.0) * np.ones((10, 10))
         case FilterType.BILINEAR:
-            return (1.0 / 16.0) * np.array(
+            filter_ = (1.0 / 16.0) * np.array(
                 [[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype
             )
         case FilterType.CORNER:
-            return (1.0 / 4.0) * np.array([[1, -2, 1], [-2, 4, -2], [1, -2, 1]])
+            filter_ = (1.0 / 4.0) * np.array([[1, -2, 1], [-2, 4, -2], [1, -2, 1]])
         case FilterType.SOBEL_X:
-            return (1.0 / 8.0) * np.array(
+            filter_ = (1.0 / 8.0) * np.array(
                 [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=dtype
             )
         case FilterType.SOBEL_Y:
-            return np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=dtype)
+            filter_ = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=dtype)
         case FilterType.LAPLACIAN:
-            return np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=dtype)
+            filter_ = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=dtype)
         case FilterType.GAUSS_3X3:
-            return (1.0 / 16.0) * np.array(
+            filter_ = (1.0 / 16.0) * np.array(
                 [[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype
             )
         case FilterType.GAUSS_5X5:
-            return (1.0 / 256.0) * np.array(
+            filter_ = (1.0 / 256.0) * np.array(
                 [
                     [1, 4, 6, 4, 1],
                     [4, 16, 24, 16, 4],
@@ -61,7 +61,7 @@ def get_filter(
                 dtype=dtype,
             )
         case FilterType.GAUSS_7X7:
-            return (1.0 / 1003.0) * np.array(
+            filter_ = (1.0 / 1003.0) * np.array(
                 [
                     [0.0, 0.0, 1.0, 2.0, 1.0, 0.0, 0.0],
                     [0.0, 3.0, 13.0, 22.0, 13.0, 3.0, 0.0],
@@ -81,9 +81,11 @@ def get_filter(
                 kernel = np.exp(-(xx**2 + yy**2) / (2.0 * sigma**2))
                 return kernel / np.sum(kernel)
 
-            return gaussian_kernel(15, sigma=3.0).astype(dtype)
+            filter_ = gaussian_kernel(15, sigma=3.0).astype(dtype)
         case _:
             raise ValueError(f"{filter_name=} is not supported!")
+
+    return filter_
 
 
 def apply_filter(
