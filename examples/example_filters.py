@@ -6,8 +6,11 @@ import numpy as np
 
 from computer_vision.src.constants import FolderPath
 from computer_vision.src.filter import FilterType, apply_filter, get_filter
-from computer_vision.src.util_image import plot_grayscale
-from computer_vision.util.images import load_image_as_array, rgb_to_grayscale
+from computer_vision.util.images import (
+    load_image_as_array,
+    plot_grayscale,
+    rgb_to_grayscale,
+)
 
 image = rgb_to_grayscale(
     load_image_as_array(FolderPath.Data.joinpath("lion_downscaled.jpg"))
