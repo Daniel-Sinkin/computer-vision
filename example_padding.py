@@ -4,8 +4,7 @@ import matplotlib.pyplot as plt
 
 from src.padding import PaddingType, apply_padding
 from src.util_image import plot_grayscale
-from util.image_to_np import load_image_as_array
-from util.rbg_to_grayscale import rgb_to_grayscale
+from util.images import load_image_as_array, rgb_to_grayscale
 
 image = rgb_to_grayscale(
     load_image_as_array(

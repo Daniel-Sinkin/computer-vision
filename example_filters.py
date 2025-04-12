@@ -3,19 +3,18 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
+from src.constants import FolderPath
 from src.filter import FilterType, apply_filter, get_filter
 from src.util_image import plot_grayscale
-from util.image_to_np import load_image_as_array
-from util.rbg_to_grayscale import rgb_to_grayscale
+from util.images import load_image_as_array, rgb_to_grayscale
 
-image = rgb_to_grayscale(
-    load_image_as_array(
-        "/Users/danielsinkin/GitHub_private/computer-vision/data/lion_downscaled.jpg"
-    )
+loaded_image = rgb_to_grayscale(
+    load_image_as_array(FolderPath.Data.joinpath("lion_downscaled.jpg"))
 )
 
 
-def get_my_image() -> np.ndarray:
+def get_example_image() -> np.ndarray:
+    """Loads simple example image hardcoded based on the book."""
     return np.array(
         [
             [45, 60, 98, 127, 132, 133, 137, 133],
@@ -32,10 +31,12 @@ def get_my_image() -> np.ndarray:
 
 
 def get_my_filter() -> np.ndarray:
+    """Returns example hardcoded smoothing filter from the book."""
     return np.array([[0.1, 0.1, 0.1], [0.1, 0.2, 0.1], [0.1, 0.1, 0.1]])
 
 
-def filter_and_plot(filter_name):
+def filter_and_plot(image: np.ndarray, filter_name: str) -> None:
+    """Applies filter, plots and invokes plt.show()"""
     plot_grayscale(
         apply_filter(image, get_filter(filter_name)),
         title=filter_name,
@@ -44,24 +45,22 @@ def filter_and_plot(filter_name):
     plt.show()
 
 
-def main() -> None:
-    image_conv = apply_filter(image=get_my_image(), filter_=get_my_filter())
+def example_filters(image: np.ndarray) -> None:
+    """Applies different filters to images."""
+    image_conv = apply_filter(image=get_example_image(), filter_=get_my_filter())
 
-    plot_grayscale(get_my_image())
+    plot_grayscale(get_example_image())
     plt.show()
     plot_grayscale(image_conv)
     plt.show()
 
     plot_grayscale(image, title="original")
     plt.show()
-    filter_and_plot(filter_name=FilterType.SOBEL_X)
-    filter_and_plot(filter_name=FilterType.SOBEL_Y)
-
-    filter_and_plot(filter_name=FilterType.LAPLACIAN)
-
-    filter_and_plot(filter_name=FilterType.CORNER)
-
-    filter_and_plot(filter_name=FilterType.BILINEAR)
+    filter_and_plot(image=image, filter_name=FilterType.SOBEL_X)
+    filter_and_plot(image=image, filter_name=FilterType.SOBEL_Y)
+    filter_and_plot(image=image, filter_name=FilterType.LAPLACIAN)
+    filter_and_plot(image=image, filter_name=FilterType.CORNER)
+    filter_and_plot(image=image, filter_name=FilterType.BILINEAR)
 
     smoothed_image = apply_filter(image, get_filter(FilterType.GAUSS_5X5))
     plot_grayscale(
@@ -91,8 +90,8 @@ def main() -> None:
         FilterType.GAUSS_7X7,
         FilterType.GAUSS_15X15,
     ]:
-        filter_and_plot(filter_name=gaussian)
+        filter_and_plot(image=image, filter_name=gaussian)
 
 
 if __name__ == "__main__":
-    main()
+    example_filters(image=loaded_image)

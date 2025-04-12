@@ -9,8 +9,7 @@ import numpy as np
 from src.constants import FolderPath
 from src.filter import FilterType, apply_filter, get_filter
 from src.util_image import plot_grayscale
-from util.image_to_np import load_image_as_array
-from util.rbg_to_grayscale import rgb_to_grayscale
+from util.images import load_image_as_array, rgb_to_grayscale
 
 
 def draw_centered_rect(x_center, y_center, width, height, **kwargs) -> None:

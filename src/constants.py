@@ -11,3 +11,4 @@ class FolderPath:
     """Contains the paths in the library, all relative to the root."""
 
     Images = Path("images")
+    Data = Path("data")

@@ -87,7 +87,10 @@ def get_filter(
 
 
 def apply_filter(
-    image: np.ndarray, filter_: np.ndarray, flip_filter: bool = True
+    image: np.ndarray,
+    filter_: np.ndarray,
+    flip_filter: bool = True,
+    pad_same_size: bool = False,
 ) -> np.ndarray:
     """
     Applies a linear filter (1D or 2D) to the given image, either normally or flipped.
@@ -101,8 +104,13 @@ def apply_filter(
     else:
         _filter = filter_
 
-    i_h, i_w = image.shape
     f_h, f_w = _filter.shape
+
+    if pad_same_size:
+        pad_h, pad_w = f_h // 2, f_w // 2
+        image = np.pad(image, ((pad_h, pad_h), (pad_w, pad_w)), mode="reflect")
+
+    i_h, i_w = image.shape
 
     r_h, r_w = i_h - f_h + 1, i_w - f_w + 1
     result = np.zeros((r_h, r_w), dtype=np.float32)
