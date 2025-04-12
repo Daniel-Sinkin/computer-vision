@@ -55,7 +55,7 @@ def example_autocorrelation_detection(image: np.ndarray) -> None:
         )
         plt.axis("off")
         plt.savefig(
-            FolderPath.Images.joinpath(f"example_atuocorrelation_detection_{i}.png"),
+            FolderPath.Images.joinpath(f"example_autocorrelation_detection_{i}.png"),
             dpi=300,
         )
         plt.show()
