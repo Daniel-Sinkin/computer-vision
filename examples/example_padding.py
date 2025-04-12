@@ -2,9 +2,9 @@
 
 import matplotlib.pyplot as plt
 
-from src.padding import PaddingType, apply_padding
-from src.util_image import plot_grayscale
-from util.images import load_image_as_array, rgb_to_grayscale
+from computer_vision.src.padding import PaddingType, apply_padding
+from computer_vision.src.util_image import plot_grayscale
+from computer_vision.util.images import load_image_as_array, rgb_to_grayscale
 
 image = rgb_to_grayscale(
     load_image_as_array(

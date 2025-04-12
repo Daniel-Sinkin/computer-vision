@@ -3,7 +3,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 
-from src.constants import FolderPath
+from computer_vision.src.constants import FolderPath
 
 
 def example_fourier_of_kernels() -> None:
