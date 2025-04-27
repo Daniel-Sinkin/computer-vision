@@ -1,3 +1,5 @@
+"""danielsinkin97@gmail.com"""
+
 import sys
 import time
 from dataclasses import dataclass
