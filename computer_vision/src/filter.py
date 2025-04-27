@@ -42,9 +42,13 @@ def get_filter(
                 [[-1, 0, 1], [-2, 0, 2], [-1, 0, 1]], dtype=dtype
             )
         case FilterType.SOBEL_Y:
-            filter_ = np.array([[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=dtype)
+            filter_ = (1.0 / 8.0) * np.array(
+                [[-1, -2, -1], [0, 0, 0], [1, 2, 1]], dtype=dtype
+            )
         case FilterType.LAPLACIAN:
-            filter_ = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=dtype)
+            filter_ = (1.0 / 8.0) * np.array(
+                [[0, 1, 0], [1, -4, 1], [0, 1, 0]], dtype=dtype
+            )
         case FilterType.GAUSS_3X3:
             filter_ = (1.0 / 16.0) * np.array(
                 [[1, 2, 1], [2, 4, 2], [1, 2, 1]], dtype=dtype
