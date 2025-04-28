@@ -1,281 +1,235 @@
 """danielsinkin97@gmail.com"""
+# pylint: disable=unused-argument,missing-docstring,broad-exception-caught
 
 import logging
-import time
+import subprocess
+import sys
+import threading
+import uuid
 from pathlib import Path
-from typing import Literal
 
 import dearpygui.dearpygui as dpg
+import numexpr
 import numpy as np
+from PIL import Image
 
-from computer_vision.src.filter import FilterType, apply_filter, get_filter
-from computer_vision.util.images import load_image_as_array, rgb_to_grayscale
+fp_example = Path("examples")
+fp_data = Path("data")
+IMG_EXTS = (".png", ".jpg", ".jpeg", ".webp")
+
+MAX_IMG_W, MAX_IMG_H = 800, 600
 
 
-class DPGHandler(logging.Handler):
-    """Redirects Python logging records to a DearPyGui multiline text box."""
+class GUI:
+    def __init__(self) -> None:
+        self._setup_logger()
+        self.setup_gui()
 
-    def __init__(self, textbox_tag: str) -> None:
-        super().__init__()
-        self.textbox_tag = textbox_tag
+    def _setup_logger(self) -> None:
+        self._logger = logging.getLogger(__name__)
+        self._logger.setLevel(logging.DEBUG)
 
-    def emit(self, record: logging.LogRecord) -> None:
-        msg = self.format(record)
-        try:
-            existing = dpg.get_value(self.textbox_tag) or ""
-            dpg.set_value(self.textbox_tag, f"{msg}\n{existing}")  # prepend newest
-        except Exception:
-            # UI not ready or another problem—quietly ignore
+        handler = logging.StreamHandler()
+        handler.setLevel(logging.DEBUG)
+        formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+        handler.setFormatter(formatter)
+        self._logger.addHandler(handler)
+
+    def setup_gui(self) -> None:
+        dpg.create_context()
+        dpg.create_viewport(title="Computer Vision", width=1600, height=900)
+        dpg.setup_dearpygui()
+
+        font_path = Path(__file__).parent.joinpath(
+            "assets", "MonaspaceKrypton-Regular.otf"
+        )
+        with dpg.font_registry():
+            self._font = dpg.add_font(str(font_path), 16)
+        with dpg.texture_registry(show=False, tag="__texreg__"):
             pass
 
-
-class PixelBufferApp:
-    """Interactive RGBA pixel-buffer playground with DearPyGui."""
-
-    def __init__(self, buffer_width: int = 512, buffer_height: int = 512) -> None:
-        self._buffer_width = buffer_width
-        self._buffer_height = buffer_height
-
-        # The image information
-        self._buffer: np.ndarray = self.get_empty_buffer()
-        # What we drew, will be drawn on top of the core buffer, maybe replaced by layering later
-        self._buffer_draw = self.get_empty_buffer()
-        self._buffer_history: list[np.ndarray] = []
-
-        self.texture_tag: str = ""
-        self.last_time: float = time.perf_counter()
-        self.data_folder = Path("data")
-
-        dpg.create_context()
-        dpg.create_viewport(
-            title="Pixel Buffer Viewer", width=900, height=700, resizable=False
-        )
-
-        with dpg.texture_registry(show=False):
-            empty_tex = np.zeros(
-                (self._buffer_height * self._buffer_width * 4,), dtype=np.float32
-            ).tolist()
-            self.texture_tag = "dynamic_tex"
-            dpg.add_dynamic_texture(
-                self._buffer_width,
-                self._buffer_height,
-                empty_tex,
-                tag=self.texture_tag,
-            )
-
-        with dpg.window(label="Pixel Buffer Viewer", tag="Primary Window"):
-            with dpg.group(horizontal=True):
-                dpg.add_image(self.texture_tag)
-
-                with dpg.group():
-                    with dpg.group(horizontal=True):
-                        dpg.add_button(
-                            label="Apply Random Noise",
-                            callback=self.apply_random_noise,
+        with dpg.window(label="Menu"):
+            with dpg.menu(label="Load Image"):
+                # populate every *.png|*.jpg|*.webp in data/
+                for img_path in fp_data.iterdir():
+                    if img_path.suffix.lower() in IMG_EXTS:
+                        dpg.add_menu_item(
+                            label=img_path.name,
+                            callback=self.callback_load_image,
+                            user_data=img_path,
                         )
-                        dpg.add_slider_int(
-                            default_value=50,
-                            min_value=0,
-                            max_value=100,
-                            width=150,
-                            tag="noise_slider",
-                        )
-                    dpg.add_button(label="Clear Screen", callback=self.clear_screen)
+
+        with dpg.window(label="Run Example Scripts"):
+            for func in fp_example.iterdir():
+                if func.suffix == ".py" and func.name != "__init__.py":
                     dpg.add_button(
-                        label="Clear Draw Buffer", callback=self.clear_draw_buffer
+                        label=f"{func.name}",
+                        callback=self.callback_btn_invoke_py_script,
+                        user_data=func,
                     )
 
-                    with dpg.group(horizontal=True):
-                        dpg.add_button(label="Load Image", callback=self.load_image)
-                        img_choices = [
-                            f.name
-                            for f in self.data_folder.iterdir()
-                            if f.suffix.lower() in (".webp", ".png", ".jpg", ".jpeg")
-                        ]
-                        if not img_choices:
-                            img_choices = ["(No images found)"]
-                        dpg.add_combo(
-                            items=img_choices,
-                            default_value=img_choices[0],
-                            fit_width=True,
-                            tag="load_image_dropdown",
-                        )
-
-                    with dpg.group(horizontal=True):
-                        dpg.add_button(label="Apply Filter", callback=self.apply_filter)
-                        filter_choices = [ft.value for ft in FilterType]
-                        dpg.add_combo(
-                            items=filter_choices,
-                            default_value=filter_choices[0],
-                            fit_width=True,
-                            tag="apply_filter_dropdown",
-                        )
-
-                    dpg.add_button(label="Undo", callback=self.undo_step)
-
-            dpg.add_separator()
+        with dpg.window(label="Syntax Evaluation", pos=(400, 0)):
             dpg.add_input_text(
-                label="Logs",
-                tag="log_box",
-                multiline=True,
+                label="f(x)",
+                tag="syntax_eval_func_input",
+                default_value="cos(x)",
+                callback=self.callback_ti_syntax_changed,
+                on_enter=False,
+            )
+            dpg.add_input_text(
+                label="Value",
+                tag="syntax_eval_value_input",
+                default_value="0.0",
+                callback=self.callback_ti_syntax_changed,
+                on_enter=False,
+            )
+            dpg.add_input_text(
+                label="Result",
+                tag="syntax_eval_value_output",
                 readonly=True,
-                height=150,
-                width=-1,
+                default_value="",
             )
 
+        self.evaluate_syntax_change()
+
         with dpg.handler_registry():
-            dpg.add_mouse_click_handler(callback=self.on_mouse_click)
-            dpg.add_mouse_drag_handler(callback=self.on_mouse_drag, threshold=0)
-            dpg.add_mouse_wheel_handler(callback=self.on_mouse_wheel)
-
-        self._configure_logging()
-
-        dpg.set_primary_window("Primary Window", True)
-        dpg.setup_dearpygui()
-        dpg.show_viewport()
-
-        self.clear_screen()
-
-    def _configure_logging(self) -> None:
-        self.logger = logging.getLogger("PixelBufferApp")
-        self.logger.setLevel(logging.DEBUG)
-
-        formatter = logging.Formatter(
-            "%(asctime)s - %(levelname)s - %(message)s", datefmt="%H:%M:%S"
-        )
-
-        gui_handler = DPGHandler("log_box")
-        gui_handler.setFormatter(formatter)
-
-        console_handler = logging.StreamHandler()
-        console_handler.setFormatter(formatter)
-
-        self.logger.addHandler(gui_handler)
-        self.logger.addHandler(console_handler)
-
-    def get_empty_buffer(self) -> np.ndarray:
-        return np.zeros((self._buffer_height, self._buffer_width, 4), dtype=np.uint8)
-
-    def _clear_buffer(self) -> None:
-        self._buffer[:, :, :] = 0
-        self._buffer[:, :, 3] = 255
-
-    def _push_to_gpu(self) -> None:
-        """Normalize to [0,1] floats and copy into the DearPyGui dynamic texture."""
-        base = np.copy(self._buffer)
-        draw = self._buffer_draw
-
-        mask = np.any(draw != 0, axis=-1)
-        base[mask] = draw[mask]
-
-        flat = base.flatten().astype(np.float32) / 255.0
-        dpg.set_value(self.texture_tag, flat.tolist())
-
-    def _append_to_history(self) -> None:
-        self._buffer_history.append(np.copy(self._buffer))
-
-    def clear_draw_buffer(self, *_, **__) -> None:
-        self._buffer_draw = self.get_empty_buffer()
-        self._push_to_gpu()
-
-    def apply_random_noise(self, *_, **__) -> None:
-        self._append_to_history()
-        strength = dpg.get_value("noise_slider") / 100.0
-
-        noise: np.ndarray[tuple[int, ...], np.dtype[np.floating[np._32Bit]]] = (
-            np.random.randint(
-                0,
-                256,
-                (self._buffer_height, self._buffer_width, 3),
-                dtype=np.uint8,
-            ).astype(np.float32)
-        )
-
-        current = self._buffer[:, :, :3].astype(np.float32)
-        blended = (1.0 - strength) * current + strength * noise
-        self._buffer[:, :, :3] = np.clip(blended, 0, 255).astype(np.uint8)
-        self._buffer[:, :, 3] = 255
-        self._push_to_gpu()
-
-    def clear_screen(self, *_, **__) -> None:
-        self._append_to_history()
-        self._clear_buffer()
-        self._push_to_gpu()
-
-    def load_image(self, *_, **__) -> None:
-        self._append_to_history()
-        self._clear_buffer()
-
-        img_name = dpg.get_value("load_image_dropdown")
-        img_path = self.data_folder.joinpath(img_name)
-        gray = rgb_to_grayscale(load_image_as_array(img_path))
-
-        y_max, x_max = gray.shape
-        y_slice = slice(0, min(self._buffer_height, y_max))
-        x_slice = slice(0, min(self._buffer_width, x_max))
-
-        self._buffer[y_slice, x_slice, :3] = gray[y_slice, x_slice, np.newaxis]
-        self._push_to_gpu()
-
-    def apply_filter(self, *_, **__) -> None:
-        self._append_to_history()
-        filter_name = dpg.get_value("apply_filter_dropdown")
-        filter_kernel = get_filter(FilterType(filter_name))
-        filtered = apply_filter(
-            self._buffer[:, :, 0], filter_=filter_kernel, pad_same_size=True
-        )
-        self._buffer[:, :, :3] = filtered[:, :, np.newaxis]
-        self._push_to_gpu()
-
-    def undo_step(self, *_, **__) -> None:
-        if not self._buffer_history:
-            self.logger.warning("Undo buffer empty!")
-            return
-        self._buffer = np.copy(self._buffer_history.pop())
-        self._push_to_gpu()
-
-    def color_pixel(self, ty: int, tx: int, color: Literal["r", "g", "b"]) -> None:
-        match color:
-            case "r":
-                color_idx = 0
-            case "g":
-                color_idx = 1
-            case "b":
-                color_idx = 2
-
-        self._buffer_draw[ty - 5 : ty + 5, tx - 5 : tx + 5, [0, 3]] = 255.0
-        self._push_to_gpu()
-
-    def on_mouse_click(self, sender, app_data) -> None:
-        # Global mouse pos
-        mx, my = dpg.get_mouse_pos(local=False)
-        # Workaround to the fact that dpg adds 10 pixel paddin
-        mx -= 10
-        my -= 10
-
-        # Texture position and size
-        x0, y0 = dpg.get_item_pos(self.texture_tag)
-        w = dpg.get_item_width(self.texture_tag)
-        h = dpg.get_item_height(self.texture_tag)
-
-        # Bail if outside
-        if mx < x0 or mx > x0 + w or my < y0 or my > y0 + h:
-            return
-
-        # Map to texels
-        tx = int((mx - x0) / w * self._buffer_width)
-        ty = int((my - y0) / h * self._buffer_height)
-        tx = max(0, min(self._buffer_width - 1, tx))
-        ty = max(0, min(self._buffer_height - 1, ty))
-        self.logger.info("Clicked texel at: (%d, %d)", ty, tx)
-        self.color_pixel(ty=ty, tx=tx, color="r")
-
-    def on_mouse_drag(self, sender, app_data) -> None:
-        pass
-
-    def on_mouse_wheel(self, sender, app_data) -> None:
-        pass
+            dpg.add_key_down_handler(callback=self.callback_key_down)
 
     def run(self) -> None:
+        dpg.show_viewport()
+        dpg.bind_font(self._font)
         dpg.start_dearpygui()
+        self.cleanup()
+
+    def evaluate_syntax_change(self) -> None:
+        """Called every time either syntax input box changes."""
+        expr = dpg.get_value("syntax_eval_func_input")
+        val_text = dpg.get_value("syntax_eval_value_input")
+
+        try:
+            x_val = float(val_text)
+            result = numexpr.evaluate(expr, local_dict={"x": x_val})
+            result_str = str(result.item() if hasattr(result, "item") else result)
+            dpg.set_value("syntax_eval_value_output", result_str)
+        except Exception:
+            dpg.set_value("syntax_eval_value_output", "INVALID")
+
+    def callback_ti_syntax_changed(self, sender, app_data, user_data) -> None:
+        self.evaluate_syntax_change()
+
+    def log_subprocess_output(self, stdout, stderr, script_name: str) -> None:
+        assert stdout is not None
+        assert stderr is not None
+
+        for line in stdout:
+            self._logger.info("[%s][stdout] %s", script_name, line.rstrip())
+
+        for line in stderr:
+            self._logger.error("[%s][stderr] %s", script_name, line.rstrip())
+
+    def callback_btn_invoke_py_script(self, sender, app_data, user_data: Path) -> None:
+        try:
+            process = subprocess.Popen(
+                [sys.executable, str(user_data)],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True,
+            )
+            threading.Thread(
+                target=self.log_subprocess_output,
+                args=(process.stdout, process.stderr, user_data.name),
+                daemon=True,
+            ).start()
+
+            self._logger.info("Launched '%s' successfully.", user_data.name)
+        except Exception as e:
+            self._logger.error("Failed to launch '%s': %s", user_data.name, e)
+
+    def callback_key_down(self) -> None:
+        if dpg.is_key_down(dpg.mvKey_Escape):
+            dpg.stop_dearpygui()
+
+    def callback_hover_image(self, sender, app_data, user_data):
+        """
+        Fires every frame while the mouse is over the image widget.
+        user_data = dict(tex_tag=…, img_w=…, img_h=…, view_w=…, view_h=…)
+        """
+        # widget & mouse positions are in DearPyGui's global pixel space
+        mouse_x, mouse_y = dpg.get_mouse_pos(local=False)
+        item_x, item_y = dpg.get_item_pos(sender)  # sender *is* the image item
+        rel_x = mouse_x - item_x
+        rel_y = mouse_y - item_y
+
+        # inside the displayed rectangle?
+        vw, vh = user_data["view_w"], user_data["view_h"]
+        if 0 <= rel_x < vw and 0 <= rel_y < vh:
+            # convert from visible-pixel to original-image texel
+            # (top-left 1-to-1 because we clipped, not scaled)
+            tex_x = int(rel_x)
+            tex_y = int(rel_y)
+            self._logger.debug(
+                "[%s] hover texel (%d, %d)", user_data["tex_tag"], tex_x, tex_y
+            )
+
+    def callback_load_image(self, sender, app_data, user_data: Path) -> None:
+        """Menu-item clicked → load image, create texture, show clipped view."""
+        try:
+            # Load image as RGBA (DearPyGui expects 4 channels)
+            img = Image.open(user_data).convert("RGBA")
+            img_w, img_h = img.size
+            img_data = (np.asarray(img, dtype=np.float32) / 255.0).flatten()
+        except Exception as exc:
+            self._logger.error("Failed loading image '%s': %s", user_data, exc)
+            return
+
+        # Clip (not scale) to MAX_IMG_W × MAX_IMG_H via UV coordinates
+        disp_w, disp_h = min(img_w, MAX_IMG_W), min(img_h, MAX_IMG_H)
+        uv_max = (disp_w / img_w, disp_h / img_h)
+
+        tex_tag = f"tex::{uuid.uuid4()}"
+        dpg.add_static_texture(img_w, img_h, img_data, parent="__texreg__", tag=tex_tag)
+
+        # Window slightly larger than the image so borders/title fit nicely
+        win_w, win_h = disp_w + 16, disp_h + 38
+        with dpg.window(
+            label=f"Image - {user_data.name}",
+            width=win_w,
+            height=win_h,
+            no_resize=True,
+        ):
+            img_item = dpg.add_image(
+                tex_tag,
+                width=disp_w,
+                height=disp_h,
+                uv_min=(0.0, 0.0),
+                uv_max=uv_max,
+            )
+
+        # -------- item handlers -------------------------------------------------
+        with dpg.item_handler_registry(tag=f"{tex_tag}_hover_handlers") as ih_reg:
+            dpg.add_item_hover_handler(
+                callback=self.callback_hover_image,
+                user_data={
+                    "tex_tag": tex_tag,
+                    "img_w": img_w,
+                    "img_h": img_h,
+                    "view_w": disp_w,
+                    "view_h": disp_h,
+                },
+            )
+
+        # attach registry to the image widget
+        dpg.bind_item_handler_registry(img_item, ih_reg)
+        # -----------------------------------------------------------------------
+
+        self._logger.info(
+            "Loaded image '%s' (%dx%d → showing %dx%d)",
+            user_data.name,
+            img_w,
+            img_h,
+            disp_w,
+            disp_h,
+        )
+
+    def cleanup(self) -> None:
         dpg.destroy_context()

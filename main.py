@@ -1,10 +1,10 @@
 """danielsinkin97@gmail.com"""
 
-from computer_vision.gui.gui import PixelBufferApp
+from computer_vision.gui.gui import GUI
 
 
 def main() -> None:
-    PixelBufferApp().run()
+    GUI().run()
 
 
 if __name__ == "__main__":
