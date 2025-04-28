@@ -13,13 +13,15 @@ from computer_vision.util.images import load_image_as_array, rgb_to_grayscale
 
 @dataclass
 class PixelBufferApp:
-    _buffer_width: int = 400
-    _buffer_height: int = 400
+    _buffer_width: int = 512
+    _buffer_height: int = 512
 
     _buffer: np.ndarray = field(init=False)
     _buffer_history: list[np.ndarray] = field(init=False)
     texture_tag: str = field(init=False)
     last_time: float = field(init=False, default_factory=time.perf_counter)
+
+    data_folder = Path("data")
 
     def __post_init__(self):
         # initialize raw RGBA buffer
@@ -55,18 +57,56 @@ class PixelBufferApp:
         # 2) Now build the actual window UI:
         with dpg.window(label="Pixel Buffer Viewer", tag="Primary Window"):
             dpg.add_text("Simple Raw Pixel Buffer GUI", color=[200, 200, 200])
-            # Just reference the texture here; it’ll be pulled from the registry.
-            dpg.add_image(self.texture_tag)
             dpg.add_separator()
-            dpg.add_button(label="Apply Random Noise", callback=self.apply_random_noise)
-            dpg.add_button(label="Clear Screen", callback=self.clear_screen)
-            dpg.add_button(label="Fill Gradient", callback=self.fill_gradient)
-            dpg.add_button(label="Load Image", callback=self.load_image)
-            dpg.add_button(label="Apply Gaussian", callback=self.apply_gaussian)
-            dpg.add_button(label="Undo", callback=self.undo_step)
+
+            with dpg.group(horizontal=True):
+                # left: the dynamic texture
+                dpg.add_image(self.texture_tag)
+
+                # right: stack buttons vertically
+                with dpg.group():
+                    with dpg.group(horizontal=True):
+                        dpg.add_button(
+                            label="Apply Random Noise", callback=self.apply_random_noise
+                        )
+                        dpg.add_slider_int(
+                            default_value=50,
+                            min_value=0,
+                            max_value=100,
+                            width=150,
+                            tag="noise_slider",
+                        )
+                    dpg.add_button(label="Clear Screen", callback=self.clear_screen)
+                    dpg.add_button(label="Fill Gradient", callback=self.fill_gradient)
+                    with dpg.group(horizontal=True):
+                        dpg.add_button(label="Load Image", callback=self.load_image)
+
+                        choices = [
+                            f.name
+                            for f in self.data_folder.iterdir()
+                            if f.suffix.lower() in (".webp", ".png", ".jpg")
+                        ]
+
+                        if not choices:
+                            choices = ["(No images found)"]
+
+                        dpg.add_combo(
+                            items=choices,
+                            default_value=choices[0],
+                            fit_width=True,
+                            tag="load_image_dropdown",
+                        )
+                    with dpg.group(horizontal=True):
+                        dpg.add_button(label="Apply Filter", callback=self.apply_filter)
+                        choices = [x.value for x in FilterType]
+                        dpg.add_combo(
+                            items=choices,
+                            default_value=choices[0],
+                            fit_width=True,
+                            tag="apply_filter_dropdown",
+                        )
+                    dpg.add_button(label="Undo", callback=self.undo_step)
             dpg.add_separator()
-            # TODO: Implement this, have this tag and update with length of history on every update
-            # self.history_text_tag = dpg.add_text()
 
         dpg.set_primary_window("Primary Window", True)
         dpg.setup_dearpygui()
@@ -89,10 +129,28 @@ class PixelBufferApp:
 
     def apply_random_noise(self, *args, **kwargs):
         self.append_to_history()
-        self._buffer[:, :, :3] = np.random.randint(
-            0, 256, (self._buffer_height, self._buffer_width, 3), dtype=np.uint8
+
+        noise_strength: float = dpg.get_value("noise_slider") / 100.0
+
+        # Generate random noise
+        noise: np.ndarray[tuple[int, ...], np.dtype[np.floating[np._32Bit]]] = (
+            np.random.randint(
+                0, 256, (self._buffer_height, self._buffer_width, 3), dtype=np.uint8
+            ).astype(np.float32)
         )
+
+        # Current image (only RGB channels) as float
+        current = self._buffer[:, :, :3].astype(np.float32)
+
+        # Blend (linear interpolation)
+        blended = (1.0 - noise_strength) * current + noise_strength * noise
+
+        # Clip, round, and convert back to uint8
+        self._buffer[:, :, :3] = np.clip(blended, 0, 255).astype(np.uint8)
+
+        # Ensure alpha stays at 255
         self._buffer[:, :, 3] = 255
+
         self.update_texture()
 
     def _clear_buffer(self) -> None:
@@ -108,7 +166,7 @@ class PixelBufferApp:
         self.append_to_history()
         self._clear_buffer()
 
-        image_fp = Path("data/butterfly.webp")
+        image_fp = self.data_folder.joinpath(dpg.get_value("load_image_dropdown"))
         grayscale_image = rgb_to_grayscale(load_image_as_array(image_fp))
 
         assert len(grayscale_image.shape) == 2
@@ -121,9 +179,9 @@ class PixelBufferApp:
         ]
         self.update_texture()
 
-    def apply_gaussian(self, *args, **kwargs) -> None:
+    def apply_filter(self, *args, **kwargs) -> None:
         self.append_to_history()
-        filter_ = get_filter(FilterType.GAUSS_15X15)
+        filter_ = get_filter(FilterType(dpg.get_value("apply_filter_dropdown")))
         filtered_image = apply_filter(
             self._buffer[:, :, 0], filter_=filter_, pad_same_size=True
         )
