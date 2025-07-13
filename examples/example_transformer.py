@@ -48,6 +48,11 @@ def example_transformer() -> None:
     print(f"np.dot(query[2], keys[1])={float(np.dot(query[2],keys[1])):.4f}")
     print(f"similarities_noscale[2, 1]={float(similarities_noscale[2, 1]):.4f}")
     print()
+    similarities_masked = similarities.copy()
+    for col in range(N):
+        for row in range(col + 1, N):
+            similarities_masked[row, col] = -np.inf
+
     attention_weights = softmax(similarities)
     print(f"attention_weights[:3,:3]=\n{attention_weights[:3,:3]}")
     print(
@@ -58,6 +63,14 @@ def example_transformer() -> None:
     print(f"attention_weights_temp[:3,:3]=\n{attention_weights_temp[:3,:3]}")
     print(
         f"{np.max(attention_weights_temp)=:.4f},{np.min(attention_weights_temp)=:.4f},{np.sum(attention_weights_temp)=:.4f}"
+    )
+
+    attention_weights_temp_masked = softmax(similarities_masked / temp)
+    print(
+        f"attention_weights_temp_masked[:3,:3]=\n{attention_weights_temp_masked[:3,:3]}"
+    )
+    print(
+        f"{np.max(attention_weights_temp_masked)=:.4f},{np.min(attention_weights_temp_masked)=:.4f},{np.sum(attention_weights_temp_masked)=:.4f}"
     )
 
     plt.figure(figsize=(9, 8))
@@ -73,6 +86,7 @@ def example_transformer() -> None:
     plt.xticks(ticks)
     plt.yticks(ticks)
     plt.tight_layout()
+    plt.savefig("example_transformer_attention_weights.png", dpi=300)
     plt.show()
 
     plt.figure(figsize=(9, 8))
@@ -88,6 +102,23 @@ def example_transformer() -> None:
     plt.xticks(ticks)
     plt.yticks(ticks)
     plt.tight_layout()
+    plt.savefig("example_transformer_attention_weights_temp.png", dpi=300)
+    plt.show()
+
+    plt.figure(figsize=(9, 8))
+    plt.imshow(attention_weights_temp_masked, cmap="viridis", aspect="auto")
+    plt.colorbar(label="Attention Weight Masked (temp adj. {temp=})")
+    plt.title(f"Self-Attention Weights Heatmap Masked\ntemperature adjusted {temp=}")
+    plt.xlabel("Key index")
+    plt.ylabel("Query index")
+    ticks = np.arange(0, N, 4)
+    if (N - 1) not in ticks:
+        ticks = np.append(ticks, N - 1)
+
+    plt.xticks(ticks)
+    plt.yticks(ticks)
+    plt.tight_layout()
+    plt.savefig("example_transformer_attention_weights_temp_masked.png", dpi=300)
     plt.show()
 
 
