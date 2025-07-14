@@ -1,8 +1,11 @@
 """
 danielsinkin97@gmail.com
 
-Contains an implementation of the 2017 Attention is all you need Transformer,
-uses QKV fusing.
+Implementation of the original 2017 *Attention Is All You Need* Transformer
+architecture (only the encoder part) with optional QKV-fused projections
+for faster attention. The module can be executed as a script to benchmark
+a single forward pass under various back-ends (CPU, CUDA, Apple MPS) while
+collecting profiler statistics.
 """
 
 import argparse
@@ -21,11 +24,29 @@ import torch.profiler
 
 @dataclass(frozen=True)
 class Configs:
+    """
+    Compile-time switches controlling optional functionality.
+    * use_fused_qkv - Route attention through a single `nn.Linear` that
+      projects **queries, keys and values jointly** (QKV fusion). This reduces
+      kernel launches and improves memory locality at the cost of marginally
+      higher register pressure.
+    * asserts_enabled - Enable shape and mask assertions throughout the
+      model. These checks are helpful during development but incur a runtime
+      hit, so they are disabled by default in production runs.
+    """
+
     use_fused_qkv: bool = True
     asserts_enabled: bool = False
 
 
 class ProfilerMode(Enum):
+    """
+    Execution/Profiling modes used by :pyfunc:`main`.
+    * NONE - No profiler, wall-clock measurement only (fastest).
+    * CPU_ONLY - Record CPU activities, including tensor shapes & memory.
+    * CPU_AND_CUDA - Record CPU **and** CUDA kernels (adds GPU timing).
+    """
+
     NONE = auto()
     CPU_ONLY = auto()
     CPU_AND_CUDA = auto()
@@ -48,6 +69,10 @@ BROADCAST_SHAPE = 1
 
 
 class MaskedMultiHeadSelfAttention(nn.Module):
+    """
+    Causal masked multi-head self-attention (MSHA)
+    """
+
     def __init__(self, d_model: int = 768, n_head: int = 12):
         super().__init__()  # type: ignore
         assert d_model % n_head == 0, "d_model must be divisible by n_head"
@@ -68,7 +93,9 @@ class MaskedMultiHeadSelfAttention(nn.Module):
         self.W_O = nn.Linear(d_model, d_model)
 
     def forward(self, x: Tensor) -> Tensor:
-        """Computes MHSA"""
+        """
+        Computes Scaled Dot-Product Attention
+        """
         batch, seq_len, d_model_input = x.shape
         assert d_model_input == self.d_model, f"{d_model_input=} != {self.d_model=}"
 
@@ -151,6 +178,8 @@ class MaskedMultiHeadSelfAttention(nn.Module):
 
 
 class TransformerBlock(nn.Module):
+    """Pre-norm Transformer block (MHSA -> FFN) with residual connections"""
+
     def __init__(
         self,
         d_model: int = 768,
@@ -173,12 +202,17 @@ class TransformerBlock(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
+        """
+        Apply MHSA and position‑wise FFN (both with residual add & norm).
+        """
         output = x + cast(Tensor, self.mhsa(self.ln_mhsa(x)))
         output = output + cast(Tensor, self.feed_forward(self.ln_ff(output)))
         return output
 
 
 class Transformer(nn.Module):
+    """Stack of TransformerBlock for the encoder."""
+
     def __init__(
         self, d_model: int = 768, n_head: int = 12, d_ff: int = 2024, n_layer: int = 12
     ):
@@ -197,6 +231,7 @@ class Transformer(nn.Module):
         )
 
     def forward(self, x: Tensor) -> Tensor:
+        """Run the input through every Transformer block in sequence."""
         return self.transformer_blocks(x)
 
 
@@ -237,7 +272,11 @@ def parse_args() -> argparse.Namespace:
 
 
 def main() -> None:
-    """Example that creates a transformer and profiles one forward pass"""
+    """
+    Example that creates a Transformer and profiles one forward pass
+
+    Processes CLI args that determine what backend and what datatype should be used.
+    """
 
     args = parse_args()
 
