@@ -5,9 +5,12 @@ Contains an implementation of the 2017 Attention is all you need Transformer,
 uses QKV fusing.
 """
 
+import argparse
 from typing import cast
 from dataclasses import dataclass
 import math
+import time
+from enum import Enum, auto
 
 import torch
 from torch import Tensor
@@ -18,11 +21,14 @@ import torch.profiler
 
 @dataclass(frozen=True)
 class Configs:
-    """Contains all configurations"""
-
     use_fused_qkv: bool = True
+    asserts_enabled: bool = False
 
-    asserts_enabled: bool = True
+
+class ProfilerMode(Enum):
+    NONE = auto()
+    CPU_ONLY = auto()
+    CPU_AND_CUDA = auto()
 
 
 def assert_shape(x: Tensor, expected_shape: torch.Size | tuple[int, ...]) -> None:
@@ -38,14 +44,13 @@ def assert_same_shape(x: Tensor, y: Tensor) -> None:
 
 
 # For shape asserts so we have no magic numbers floating around
-SHAPE_BROADCAST = 1
+BROADCAST_SHAPE = 1
 
 
 class MaskedMultiHeadSelfAttention(nn.Module):
     def __init__(self, d_model: int = 768, n_head: int = 12):
         super().__init__()  # type: ignore
-        assert d_model % n_head == 0
-        "d_model must be divisible by n_head"
+        assert d_model % n_head == 0, "d_model must be divisible by n_head"
 
         self.d_model = d_model
         self.n_head = n_head
@@ -53,9 +58,7 @@ class MaskedMultiHeadSelfAttention(nn.Module):
 
         if Configs.use_fused_qkv:
             self.W_QKV = nn.Linear(d_model, 3 * d_model)
-            self.W_Q = None
-            self.W_K = None
-            self.W_V = None
+            self.W_Q = self.W_K = self.W_V = None
         else:
             self.W_QKV = None
             self.W_Q = nn.Linear(d_model, d_model)
@@ -65,13 +68,15 @@ class MaskedMultiHeadSelfAttention(nn.Module):
         self.W_O = nn.Linear(d_model, d_model)
 
     def forward(self, x: Tensor) -> Tensor:
-        seq_len, d_model_input = x.shape
+        """Computes MHSA"""
+        batch, seq_len, d_model_input = x.shape
         assert d_model_input == self.d_model, f"{d_model_input=} != {self.d_model=}"
 
         if Configs.use_fused_qkv:
             assert all(x is None for x in (self.W_Q, self.W_K, self.W_V))
             assert self.W_QKV is not None
             qkv: Tensor = self.W_QKV(x)
+            assert_shape(qkv, (batch, seq_len, 3 * self.d_model))
             queries, keys, values = qkv.chunk(3, dim=-1)
         else:
             assert self.W_Q is not None
@@ -82,39 +87,45 @@ class MaskedMultiHeadSelfAttention(nn.Module):
             keys: Tensor = self.W_K(x)
             values: Tensor = self.W_V(x)
 
-        assert_shape(queries, (seq_len, self.d_model))
-        assert_shape(keys, (seq_len, self.d_model))
-        assert_shape(values, (seq_len, self.d_model))
+        assert_shape(queries, (batch, seq_len, self.d_model))
+        assert_same_shape(queries, keys)
+        assert_same_shape(queries, values)
 
-        queries = queries.view(seq_len, self.n_head, self.d_h)
-        keys = keys.view(seq_len, self.n_head, self.d_h)
-        values = values.view(seq_len, self.n_head, self.d_h)
+        queries = queries.view(batch, seq_len, self.n_head, self.d_h)
+        keys = keys.view(batch, seq_len, self.n_head, self.d_h)
+        values = values.view(batch, seq_len, self.n_head, self.d_h)
 
-        assert_shape(queries, (seq_len, self.n_head, self.d_h))
-        assert_shape(keys, (seq_len, self.n_head, self.d_h))
-        assert_shape(values, (seq_len, self.n_head, self.d_h))
+        assert_shape(queries, (batch, seq_len, self.n_head, self.d_h))
+        assert_same_shape(queries, keys)
+        assert_same_shape(queries, values)
 
-        queries: Tensor = queries.transpose(0, 1)
-        keys: Tensor = keys.transpose(0, 1)
-        values: Tensor = values.transpose(0, 1)
+        queries: Tensor = queries.permute(0, 2, 1, 3)
+        keys: Tensor = keys.permute(0, 2, 1, 3)
+        values: Tensor = values.permute(0, 2, 1, 3)
 
-        assert_shape(queries, (self.n_head, seq_len, self.d_h))
-        assert_shape(keys, (self.n_head, seq_len, self.d_h))
-        assert_shape(values, (self.n_head, seq_len, self.d_h))
+        assert_shape(queries, (batch, self.n_head, seq_len, self.d_h))
+        assert_same_shape(queries, keys)
+        assert_same_shape(queries, values)
 
         similarity = torch.matmul(queries, keys.transpose(-2, -1)) / math.sqrt(self.d_h)
-        assert_shape(similarity, (self.n_head, seq_len, seq_len))
+        assert_shape(similarity, (batch, self.n_head, seq_len, seq_len))
 
-        causal_mask = torch.tril(
-            torch.ones(seq_len, seq_len, dtype=torch.bool, device=similarity.device)
-        ).unsqueeze(0)
+        causal_mask = (
+            torch.tril(
+                torch.ones(seq_len, seq_len, dtype=torch.bool, device=similarity.device)
+            )
+            .unsqueeze(0)
+            .unsqueeze(0)
+        )
         neg_inf = torch.finfo(similarity.dtype).min
         similarity = torch.where(causal_mask, similarity, neg_inf)
 
         if Configs.asserts_enabled:  # expensive setup for assert
-            assert_shape(causal_mask, (SHAPE_BROADCAST, seq_len, seq_len))
+            assert_shape(
+                causal_mask, (BROADCAST_SHAPE, BROADCAST_SHAPE, seq_len, seq_len)
+            )
             check_mask = ~causal_mask
-            assert_shape(check_mask, causal_mask.shape)
+            assert_same_shape(check_mask, causal_mask)
             masked_values = similarity[check_mask.expand_as(similarity)]
             expected = torch.full_like(masked_values, neg_inf)
             assert torch.all(
@@ -122,18 +133,19 @@ class MaskedMultiHeadSelfAttention(nn.Module):
             ), "Causal mask failed"
 
         attention_weights = F.softmax(similarity, dim=-1)
-        assert_shape(attention_weights, (self.n_head, seq_len, seq_len))
+        assert_shape(attention_weights, (batch, self.n_head, seq_len, seq_len))
 
         attention_output = torch.matmul(attention_weights, values)
-        assert_shape(attention_output, (self.n_head, seq_len, self.d_h))
+        assert_shape(attention_output, (batch, self.n_head, seq_len, self.d_h))
 
-        attention_output = (
-            attention_output.transpose(0, 1).contiguous().view(seq_len, self.d_model)
-        )
-        assert_shape(attention_output, (seq_len, self.d_model))
+        attention_output = attention_output.permute(0, 2, 1, 3).contiguous()
+        assert_shape(attention_output, (batch, seq_len, self.n_head, self.d_h))
+
+        attention_output = attention_output.view(batch, seq_len, self.d_model)
+        assert_shape(attention_output, (batch, seq_len, self.d_model))
 
         output: Tensor = self.W_O(attention_output)
-        assert_shape(output, (seq_len, self.d_model))
+        assert_shape(output, (batch, seq_len, self.d_model))
 
         return output
 
@@ -172,9 +184,9 @@ class Transformer(nn.Module):
     ):
         super().__init__()  # type: ignore
 
-        self.d_model = 768
-        self.n_head = 12
-        self.n_layer = 12
+        self.d_model = d_model
+        self.n_head = n_head
+        self.n_layer = n_layer
         self.d_ff = d_ff
 
         self.transformer_blocks = nn.Sequential(
@@ -188,21 +200,107 @@ class Transformer(nn.Module):
         return self.transformer_blocks(x)
 
 
+def parse_args() -> argparse.Namespace:
+    """
+    Parse command-line flags that control the execution backend.
+
+    Flags
+    -----
+    --mps
+        Use the Apple-GPU (MPS backend) and run in float16 precision.
+
+    --mps-f32
+        Use the Apple-GPU with float32 precision.
+
+    --cuda
+        Use CUDA GPU (if available) with float16 precision.
+
+    If none are provided, the script defaults to CPU (float32) execution
+    with torch.profiler enabled.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed arguments with boolean attributes `mps`, `mps_f32`, and `cuda`.
+    """
+    parser = argparse.ArgumentParser()
+    g = parser.add_mutually_exclusive_group()
+    g.add_argument("--mps", action="store_true", help="Run on Apple-GPU with float16")
+    g.add_argument(
+        "--mps-f32", action="store_true", help="Run on Apple-GPU with float32"
+    )
+    g.add_argument("--cuda", action="store_true", help="Run on CUDA GPU with float16")
+    g.add_argument(
+        "--cuda-f32", action="store_true", help="Run on CUDA GPU with float32"
+    )
+    return parser.parse_args()
+
+
 def main() -> None:
-    trafo = Transformer()
-    x = torch.randn(16, 768)
+    """Example that creates a transformer and profiles one forward pass"""
 
-    torch.set_num_threads(1)
-    with torch.profiler.profile(
-        activities=[torch.profiler.ProfilerActivity.CPU],
-        record_shapes=True,
-        profile_memory=True,
-        with_stack=True,
-    ) as prof:
-        trafo(x)
+    args = parse_args()
 
-    print(prof.key_averages().table(sort_by="self_cpu_time_total", row_limit=20))
+    if args.mps or args.mps_f32:
+        if not torch.backends.mps.is_available():
+            raise RuntimeError(
+                "MPS activated but MPS backend not availiable for PyTorch."
+            )
+        device = torch.device("mps")
+        dtype = torch.float16 if args.mps else torch.float32
+        profiler_mode = ProfilerMode.NONE
+        print(f"Using MPS, ({dtype})")
+    elif args.cuda or args.cuda_f32:
+        if not torch.cuda.is_available():
+            raise RuntimeError("CUDA selected but not compatible GPU found.")
+        device = torch.device("cuda")
+        dtype = torch.float32 if args.cuda_f32 else torch.float16
+        profiler_mode = ProfilerMode.CPU_AND_CUDA
+        print(f"Using CUDA, ({dtype})")
+    else:
+        device = torch.device("cpu")
+        dtype = torch.float32
+        profiler_mode = ProfilerMode.CPU_ONLY
+        print("Using CPU (float32)")
+
+    trafo = Transformer().eval().to(device=device, dtype=dtype)
+    torch.set_num_threads(torch.get_num_threads() or 8)
+
+    batch, seq_len, d_model = 16, 512, 768
+    x = torch.randn(batch, seq_len, d_model, device=device, dtype=dtype)
+
+    # Warmup run
+    with torch.no_grad():
+        for _ in range(3):
+            trafo(x)
+
+    if profiler_mode == ProfilerMode.NONE:
+        assert device.type == "mps"
+        torch.mps.synchronize()
+        t0 = time.perf_counter()
+        _ = trafo(x)
+        torch.mps.synchronize()
+        t1 = time.perf_counter()
+        print(f"{device.type.upper()} forward time: {(t1 - t0) * 1000:.2f} ms")
+    else:
+        activities = [torch.profiler.ProfilerActivity.CPU]
+        if profiler_mode == ProfilerMode.CPU_AND_CUDA:
+            activities.append(torch.profiler.ProfilerActivity.CUDA)
+
+        with torch.profiler.profile(
+            activities=activities,
+            record_shapes=True,
+            profile_memory=True,
+            with_stack=True,
+        ) as prof:
+            trafo(x)
+
+        if profiler_mode == ProfilerMode.CPU_AND_CUDA:
+            sort_key = "cuda_time_total"
+        else:
+            sort_key = "self_cpu_time_total"
+        print(prof.key_averages().table(sort_by=sort_key, row_limit=20))  # type: ignore
 
 
-if __name__ == __main__:
+if __name__ == "__main__":
     main()
