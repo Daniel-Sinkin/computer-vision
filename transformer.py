@@ -2,7 +2,7 @@
 danielsinkin97@gmail.com
 
 Implementation of the original 2017 *Attention Is All You Need* Transformer
-architecture (only the encoder part) with optional QKV-fused projections
+architecture (only the decoder part) with optional QKV-fused projections
 for faster attention. The module can be executed as a script to benchmark
 a single forward pass under various back-ends (CPU, CUDA, Apple MPS) while
 collecting profiler statistics.
