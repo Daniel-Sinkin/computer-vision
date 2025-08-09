@@ -29,10 +29,15 @@ def plot_grayscale(
     title: Optional[str] = None,
     filename: Optional[str] = None,
     figsize: tuple[int, int] = (6, 6),
+    **imshow_kwargs,
 ) -> None:
     """Plots the image as a grayscale image."""
+    assert "cmap" not in imshow_kwargs
+    assert "interpolation" not in imshow_kwargs
+    assert "X" not in imshow_kwargs
+
     plt.figure(figsize=figsize)
-    plt.imshow(array, cmap="gray", interpolation="nearest")
+    plt.imshow(array, cmap="gray", interpolation="nearest", **imshow_kwargs)
     plt.axis("off")
     if title is not None:
         plt.title(f"{title} {array.shape}")

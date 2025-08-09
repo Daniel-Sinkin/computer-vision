@@ -3,7 +3,7 @@
 from enum import StrEnum
 
 import numpy as np
-from numpy._typing import DTypeLike
+from numpy._typing import DTypeLike  # type: ignore
 
 
 class FilterType(StrEnum):
@@ -23,7 +23,7 @@ class FilterType(StrEnum):
 
 
 def get_filter(
-    filter_name: FilterType = FilterType.GAUSS_5X5, dtype: DTypeLike = np.float32
+    filter_name: FilterType | str = FilterType.GAUSS_5X5, dtype: DTypeLike = np.float32
 ) -> np.ndarray:
     """Allows selecting filters via their name."""
     match filter_name:
